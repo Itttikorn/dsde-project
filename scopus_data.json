@@ -1,6 +1,6 @@
 {
     "search-results": {
-        "opensearch:totalResults": "3720792",
+        "opensearch:totalResults": "3734477",
         "opensearch:startIndex": "0",
         "opensearch:itemsPerPage": "25",
         "opensearch:Query": {
@@ -12,25 +12,25 @@
             {
                 "@_fa": "true",
                 "@ref": "self",
-                "@href": "https://api.elsevier.com/content/search/scopus?start=0&count=25&query=PUBYEAR+%3D+2024&apiKey=c775401a84800e0b46c976c60d1f177e",
+                "@href": "https://api.elsevier.com/content/search/scopus?start=0&count=25&query=PUBYEAR+%3D+2024&apiKey=35c0b3b495c330e4a0867a611fbcb22b",
                 "@type": "application/json"
             },
             {
                 "@_fa": "true",
                 "@ref": "first",
-                "@href": "https://api.elsevier.com/content/search/scopus?start=0&count=25&query=PUBYEAR+%3D+2024&apiKey=c775401a84800e0b46c976c60d1f177e",
+                "@href": "https://api.elsevier.com/content/search/scopus?start=0&count=25&query=PUBYEAR+%3D+2024&apiKey=35c0b3b495c330e4a0867a611fbcb22b",
                 "@type": "application/json"
             },
             {
                 "@_fa": "true",
                 "@ref": "next",
-                "@href": "https://api.elsevier.com/content/search/scopus?start=25&count=25&query=PUBYEAR+%3D+2024&apiKey=c775401a84800e0b46c976c60d1f177e",
+                "@href": "https://api.elsevier.com/content/search/scopus?start=25&count=25&query=PUBYEAR+%3D+2024&apiKey=35c0b3b495c330e4a0867a611fbcb22b",
                 "@type": "application/json"
             },
             {
                 "@_fa": "true",
                 "@ref": "last",
-                "@href": "https://api.elsevier.com/content/search/scopus?start=4975&count=25&query=PUBYEAR+%3D+2024&apiKey=c775401a84800e0b46c976c60d1f177e",
+                "@href": "https://api.elsevier.com/content/search/scopus?start=4975&count=25&query=PUBYEAR+%3D+2024&apiKey=35c0b3b495c330e4a0867a611fbcb22b",
                 "@type": "application/json"
             }
         ],
