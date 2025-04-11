@@ -1,10 +1,14 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.metrics.pairwise import cosine_similarity
+import torch
+
 from sentence_transformers import SentenceTransformer
 import numpy as np
-import pydeck as pdk
+import ast
+from sklearn.preprocessing import normalize
+
+torch.classes.__path__ = []
 
 # Set page configuration
 st.set_page_config(
@@ -14,17 +18,18 @@ st.set_page_config(
     initial_sidebar_state="expanded"  # Optional: Set sidebar state (expanded/collapsed)
 )
 
-#------------------------------------------------------------ Model ----------------------------------------------------------
+#------------------------------------- ----------------------- Model ------------------------------------------------------------
 @st.cache_data
 def load_Model():
     # Load the model
     model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
-    df_pandas = pd.read_csv("data_Model/embeddings.csv")
-    df_pandas["embedding"] = df_pandas["embedding"].apply(lambda x: np.fromstring(x, sep=','))
-    # Normalize embeddings for cosine similarity
+    df_pandas = pd.read_parquet("../ML/data_with_embeddings.parquet")
+    df_pandas["embedding"] = df_pandas["embedding"].apply(lambda x: np.array(ast.literal_eval(x), dtype=np.float16) if isinstance(x, str) else x)
+
     embeddings = np.array(df_pandas["embedding"].tolist()).astype('float32')
-    norm_embeddings = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
-    return model, df_pandas, embeddings, norm_embeddings
+    
+    embeddings_normalized = normalize(np.array(df_pandas["embedding"].tolist()).astype('float32'))
+    return model, df_pandas, embeddings, embeddings_normalized
 
 model, df_pandas, embeddings, norm_embeddings = load_Model()
 
@@ -32,7 +37,7 @@ model, df_pandas, embeddings, norm_embeddings = load_Model()
 @st.cache_data
 def load_Data():
 # Load the data file
-    file_path = 'data_cleaned.csv'
+    file_path = '../DataEn/data_cleaned.csv'
     data = pd.read_csv(file_path)
 
     # Preprocess data: count papers by subject
@@ -43,27 +48,18 @@ def load_Data():
 
 data, papers_per_subject = load_Data()
 
-#------------------------------------------------------------ Map --------------------------------------------------------------
-
-@st.cache_data
-def load_Map():
-    map_data = pd.read_csv("affil_location_cleaned.csv")
-    return map_data
-map_data = load_Map()
-
-#------------------------------------------------------------ Streamlit App ----------------------------------------------------
-
+#------------------------------------------------------------ Streamlit App ------------------------------------------------------------
 def main():
     st.markdown("<h1 style='text-align: center;'>Scorpus Data</h1>", unsafe_allow_html=True)
     st.markdown("<h3 style='text-align: center;'>in 2011-2023</h3>", unsafe_allow_html=True)
-    tab1, tab2, tab3 = st.tabs(["📈 Data","🗺️ map ", "🔍 Search"])
+    tab1, tab2 = st.tabs(["📈 Data", "Search"])
 
     # Plot the number of papers per subject using Matplotlib
     with tab1:
         col1, col2 = st.columns([0.15, 0.75])
         with col2:
             st.subheader("Visualization: Papers Per Subject")
-            
+
         col1, col2, col3 = st.columns([0.16, 0.6,0.2])
         with col2:
             fig2, ax2 = plt.subplots(figsize=(8, 4))  # Adjust the size to be smaller
@@ -73,39 +69,13 @@ def main():
             ax2.set_ylabel("Number of Papers", fontsize=12)
             ax2.tick_params(axis='x', rotation=45)
             st.pyplot(fig2)
-            
+
     with tab2:
-        st.subheader("Visualization: Heatmap of location of authors")
-                        
-        col1, col2, col3 = st.columns([0.1, 0.8, 0.1])
-        with col2:
-            df_grouped = map_data.groupby(['latitude', 'longitude']).size().reset_index(name='count')
-
-            # Define the Pydeck view
-            view_state = pdk.ViewState(
-                latitude=0,
-                longitude=0,
-                zoom=1,
-                pitch=0
-            )
-            # Define the Pydeck layer for heatmap
-            layer = pdk.Layer(
-                'HeatmapLayer',
-                data=df_grouped,
-                get_position='[longitude, latitude]',
-                get_weight='count',
-                radiusPixels=50
-            )
-
-            # Render the Pydeck chart with heatmap layer
-            st.pydeck_chart(pdk.Deck(layers=[layer], initial_view_state=view_state))
-            
-    with tab3:
         # Search section
         col1, col2 = st.columns([0.1, 0.9])
         with col2:
             st.subheader("Search Related Papers")
-            
+
         col1, col2, col3, col4 = st.columns([0.15, 0.55,0.1, 0.1])
         with col2:
             text = st.text_area(
@@ -155,7 +125,7 @@ def main():
                     table_data = []
                     years = []
                     subjects = []
-                    
+
                     for idx, score in results:
                         row = df_pandas.iloc[idx]
                         published_year = pd.to_datetime(row['published_date'], errors='coerce').year
@@ -167,25 +137,13 @@ def main():
                         })
                         years.append(published_year)
                         subjects.extend(row['subject_codes'])
-                        
-                        subject_list = []
-                        for idx, score in results:
-                            row = df_pandas.iloc[idx]
-                            # Assuming 'subject_codes' column contains raw subject strings like ['MEDI', 'BIOS']
-                            raw_subjects = row['subject_codes']
-                            # Parse the string properly if it's stored as a literal string
-                            if isinstance(raw_subjects, str):
-                                # Remove brackets, split by commas, and strip whitespace
-                                cleaned_subjects = raw_subjects.strip("[]").replace("'", "").split(",")
-                                subject_list.extend([subject.strip() for subject in cleaned_subjects])
-                    
                     # Convert to DataFrame and display as a table
                     results_df = pd.DataFrame(table_data)
 
                     col1, col2 = st.columns([0.1, 0.9])
                     with col2:
                         st.subheader("Search Results")
-                        
+
                     col1, col2, col3 = st.columns([0.18, 0.57, 0.25])
                     with col2:
                         st.dataframe(results_df, use_container_width=True) # Display the table
@@ -205,7 +163,7 @@ def main():
 
                     with col4:
                         # Plot the number of papers per subject
-                        subject_counts = pd.Series(subject_list).value_counts()
+                        subject_counts = pd.Series(subjects).value_counts()
                         st.subheader("Number of Papers in Each Subject")
                         fig_subject, ax_subject = plt.subplots(figsize=(8, 4))  # Adjust the size to be smaller
                         subject_counts.plot(kind='bar', ax=ax_subject, color='lightcoral', edgecolor='black', alpha=0.7)
@@ -214,12 +172,12 @@ def main():
                         ax_subject.set_ylabel("Number of Papers", fontsize=12)
                         ax_subject.tick_params(axis='x', rotation=45)
                         st.pyplot(fig_subject)
-                    
+
                 else:
                     st.write("No results found for the given input.")
             else:
                 st.warning("Please enter a sentence or word to search!")
 
-    
+
 if __name__ == "__main__":
     main()
